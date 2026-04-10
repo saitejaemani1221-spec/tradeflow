@@ -1,38 +1,63 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { createUser, hashPassword } from '@/lib/auth';
-import { signupSchema } from '@/lib/validation/schemas';
+import { NextRequest, NextResponse } from 'next/server'
+import { createUser, generateToken } from '@/lib/auth'
+import { signupSchema } from '@/lib/validation/schemas'
 
 export async function POST(request: NextRequest) {
   try {
-    const body = await request.json();
-    const validation = signupSchema.safeParse(body);
-    
+    const body = await request.json()
+
+    const validation = signupSchema.safeParse(body)
+
     if (!validation.success) {
-      return NextResponse.json({
-        success: false,
-        error: validation.error.issues[0]?.message || 'Validation failed'
-      }, { status: 400 });
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            validation.error.issues[0]?.message ||
+            'Email and password are required',
+        },
+        { status: 400 }
+      )
     }
 
-    const { email, password, name } = validation.data;
+    const { email, password } = validation.data
 
-    const user = await createUser(email, password, name);
+    const user = await createUser(email, password)
 
-    return NextResponse.json({
-      success: true,
-      data: { user }
-    }, { status: 201 });
-  } catch (error: any) {
-    if (error.code === 'P2002') {
-      return NextResponse.json({
-        success: false,
-        error: 'Email already exists'
-      }, { status: 409 });
+    if (!user) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: 'User already exists',
+        },
+        { status: 400 }
+      )
     }
 
-    return NextResponse.json({
-      success: false,
-      error: 'Internal server error'
-    }, { status: 500 });
+    const token = generateToken(user.id)
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: {
+          token,
+          user: {
+            id: user.id,
+            email: user.email,
+          },
+        },
+      },
+      { status: 201 }
+    )
+  } catch (error) {
+    console.error('Signup error:', error)
+
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Internal server error',
+      },
+      { status: 500 }
+    )
   }
 }
