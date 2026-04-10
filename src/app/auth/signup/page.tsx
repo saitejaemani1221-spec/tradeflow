@@ -12,6 +12,13 @@ export default function Signup() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // ✅ Prevent empty input
+    if (!email.trim() || !password.trim()) {
+      setError('Email and password are required');
+      return;
+    }
+
     setLoading(true);
     setError('');
 
@@ -19,19 +26,22 @@ export default function Signup() {
       const response = await fetch('/api/auth/signup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({
+          email: email.trim(),
+          password: password.trim(),
+        }),
       });
 
       const data = await response.json();
-      
+
       if (data.success) {
-        localStorage.setItem("token", data.data.token);
+        localStorage.setItem('token', data.data.token);
         router.push('/');
       } else {
         setError(data.error || 'Signup failed');
       }
     } catch (err) {
-      setError('An error occurred');
+      setError('Something went wrong');
     } finally {
       setLoading(false);
     }
@@ -41,7 +51,11 @@ export default function Signup() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-black flex items-center justify-center">
       <div className="bg-white/10 backdrop-blur-md rounded-2xl p-8 w-96">
         <h1 className="text-3xl font-bold text-white mb-6">Sign Up</h1>
-        {error && <div className="text-red-400 mb-4">{error}</div>}
+
+        {error && (
+          <div className="text-red-400 mb-4 text-sm">{error}</div>
+        )}
+
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
             <input
@@ -53,6 +67,7 @@ export default function Signup() {
               required
             />
           </div>
+
           <div className="mb-6">
             <input
               type="password"
@@ -63,6 +78,7 @@ export default function Signup() {
               required
             />
           </div>
+
           <button
             type="submit"
             disabled={loading}
